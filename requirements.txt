@@ -5,3 +5,5 @@ langgraph
 langchain
 openai
 faker
+google-generativeai
+google-cloud-aiplatform
