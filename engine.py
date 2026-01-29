@@ -7,12 +7,27 @@ import json # For working with JSON data
 from typing import TypedDict, List # For type hinting, especially for state management
 from faker import Faker # For generating fake data for simulation
 from openai import OpenAI # For interacting with OpenAI-compatible LLMs
-from google.colab import userdata # For securely accessing Colab secrets
+# from google.colab import userdata # For securely accessing Colab secrets
 from datetime import date # For date operations
 from langgraph.graph import StateGraph, START, END # For building the LangGraph agent orchestration
 
 # Accessing API key from Colab Secrets (ensure 'OPENAI_API_KEY' is set in your secrets tab)
-openai_api_key = userdata.get('OPENAI_API_KEY')
+# openai_api_key = userdata.get('OPENAI_API_KEY')
+
+import os
+from openai import OpenAI
+
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+if not openai_api_key:
+    raise ValueError("OPENAI_API_KEY not set")
+
+client = OpenAI(
+    api_key=openai_api_key,
+    base_url="https://api.ai-gateway.tigeranalytics.com"
+)
+
+
 # Initialize the OpenAI client with the API key and custom base URL
 client = OpenAI(api_key=openai_api_key, base_url="https://api.ai-gateway.tigeranalytics.com")
 # Initialize Faker for generating synthetic data
