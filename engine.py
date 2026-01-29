@@ -80,30 +80,54 @@ def competitor_analyst_node(state: MasterState):
     records = []
     for _ in range(500):
         records.append({
-            "id": fake.uuid4()[:8], # Unique ID for traceability
-            "brand": random.choice(["McDonald's", "Burger King", "Taco Bell"]), # Competitor brand
-            "mechanic": random.choice(["BOGO", "Gamified App Challenge", "Loyalty Multiplier"]), # Offer mechanic
-            "obs_date": pd.to_datetime(fake.date_between(start_date='-60d', end_date=TODAY)) # Observation date
+            "id": fake.uuid4()[:8],  # Unique ID for traceability
+            "brand": random.choice(["McDonald's", "Burger King", "Taco Bell"]),
+            "mechanic": random.choice(["BOGO", "Gamified App Challenge", "Loyalty Multiplier"]),
+            "obs_date": pd.to_datetime(
+                fake.date_between(start_date='-60d', end_date=TODAY)
+            )
         })
+
     df = pd.DataFrame(records)
-    # Assign a weight to each record based on recency (more recent = higher weight)
-    df['weight'] = np.exp(-0.05 * (pd.Timestamp(TODAY) - df['obs_date']).dt.days)
 
-    # Identify competitor mechanics that Wendy's is NOT currently active in (gaps)
-    gaps = df[~df['mechanic'].isin(state["wendys_active"])]
-    threats = []
-    # Group by mechanic to calculate threat scores
-    for mech, group in gaps.groupby('mechanic'):
-    top_brand = group.groupby('brand')['weight'].sum().idxmax()
-
-    raw_score = group['weight'].sum()
-    score = round(min(10.0, raw_score), 1)  # 🔒 HARD CAP AT 10
-
-    trace_id = group.sort_values('weight', ascending=False)['id'].iloc[0]
-
-    threats.append(
-        f"{mech} driven by {top_brand} (Threat: {score}/10) [Ref ID: {trace_id}]"
+    # Recency weighting
+    df["weight"] = np.exp(
+        -0.05 * (pd.Timestamp(TODAY) - df["obs_date"]).dt.days
     )
+
+    # Identify competitor mechanics Wendy's is NOT active in
+    gaps = df[~df["mechanic"].isin(state["wendys_active"])]
+
+    threats = []
+
+    # ✅ FIXED INDENTATION STARTS HERE
+    for mech, group in gaps.groupby("mechanic"):
+
+        # Leading competitor brand
+        top_brand = (
+            group.groupby("brand")["weight"].sum().idxmax()
+        )
+
+        # Raw score + HARD CAP
+        raw_score = group["weight"].sum()
+        score = round(min(10.0, raw_score), 1)  # 🔒 NEVER > 10
+
+        # Traceability ID
+        trace_id = (
+            group.sort_values("weight", ascending=False)["id"].iloc[0]
+        )
+
+        threats.append(
+            f"{mech} driven by {top_brand} "
+            f"(Threat: {score}/10) [Ref ID: {trace_id}]"
+        )
+
+    return {
+        "competitor_intel": {
+            "summary": "\n".join(threats),
+            "raw": gaps.to_dict()
+        }
+    }
 
     # Return the summary of threats and the raw data for potential further analysis
     return {"competitor_intel": {"summary": "\n".join(threats), "raw": gaps.to_dict()}}
